@@ -555,7 +555,7 @@ void CodeGen::generateEnumTraits(const NodePtr& n)
                 << "        e.encodeEnum(v);\n"
                 << "    }\n"
                 << "    static void decode(Decoder& d, " << fn << "& v) {\n"
-                << "            size_t index = d.decodeEnum();\n"
+                << "            int index = d.decodeEnum();\n"
                 << "            if (index < " << first << " || index > " << last << ")\n"
                 << "            {\n"
                 << "                    std::ostringstream error;\n"
