@@ -135,12 +135,30 @@ string CodeGen::fullname(const string& name) const
 string CodeGen::generateEnumType(const NodePtr& n)
 {
     string s = decorate(n->name());
+
+    if (use_struct_ifdef_guard_)
+    {
+      /* guard for struct redefinitions */
+      std::string ifdef_decorated_name = fullname(s);
+      makeCanonical(ifdef_decorated_name, true);
+
+      os_ << "#ifndef " << ifdef_decorated_name << "_STRUCT_GUARD_" << "\n";
+      os_ << "#define " << ifdef_decorated_name << "_STRUCT_GUARD_" << "\n";
+    }
+
     os_ << "enum " << s << " {\n";
     size_t c = n->names();
     for (size_t i = 0; i < c; ++i) {
         os_ << "    " << n->nameAt(i) << ",\n";
     }
     os_ << "};\n\n";
+
+    /* guard for struct redefinitions */
+    if (use_struct_ifdef_guard_)
+    {
+      os_ << "#endif\n";
+    }
+
     return s;
 }
 
@@ -516,6 +534,16 @@ void CodeGen::generateEnumTraits(const NodePtr& n)
                 first = n->nameAt(0);
                 last = n->nameAt(c-1);
         }
+
+        if (use_struct_ifdef_guard_)
+        {
+          /* guard for struct redefinitions */
+          std::string ifdef_guard_str = fn;
+          makeCanonical(ifdef_guard_str, true);
+          os_ << "#ifndef " << ifdef_guard_str << "_CODEC_GUARD_" << "\n";
+          os_ << "#define " << ifdef_guard_str << "_CODEC_GUARD_" << "\n";
+        }
+
         os_ << "template<> struct codec_traits<" << fn << "> {\n"
                 << "    static void encode(Encoder& e, " << fn << " v) {\n"
                 << "            if (v < "  << first << " || v > " << last << ")\n"
@@ -527,7 +555,7 @@ void CodeGen::generateEnumTraits(const NodePtr& n)
                 << "        e.encodeEnum(v);\n"
                 << "    }\n"
                 << "    static void decode(Decoder& d, " << fn << "& v) {\n"
-                << "            size_t index = d.decodeEnum();\n"
+                << "            int index = d.decodeEnum();\n"
                 << "            if (index < " << first << " || index > " << last << ")\n"
                 << "            {\n"
                 << "                    std::ostringstream error;\n"
@@ -537,6 +565,12 @@ void CodeGen::generateEnumTraits(const NodePtr& n)
                 << "        v = static_cast<" << fn << ">(index);\n"
                 << "    }\n"
                 << "};\n\n";
+
+        if (use_struct_ifdef_guard_)
+        {
+          /* guard for redefinitions */
+          os_ << "#endif\n";
+        }
 }
 
 void CodeGen::generateRecordTraits(const NodePtr& n)
